@@ -46,7 +46,7 @@ jobs:
           exit 1
         shell: bash
       - name: The compiler works
-        run:
+        run: |
           nim --version
 
           cat << "EOF" > test.nim
