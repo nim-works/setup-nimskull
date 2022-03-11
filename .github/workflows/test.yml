@@ -14,7 +14,7 @@ on:
 
 jobs:
   check:
-    stategy:
+    strategy:
       matrix:
         runner: [ubuntu-latest, macos-latest]
         spec:
