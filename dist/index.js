@@ -15929,20 +15929,20 @@ async function setupCompiler(client, range, update) {
     let installDir = tc.find(ToolName, range);
     /* If its not in the cache or an update is requested */
     if (!installDir || update) {
-        const matchedVersion = await searcher.findVersion(client, range);
-        if (!matchedVersion)
+        const release = await searcher.findVersion(client, range);
+        if (!release)
             throw `Could not find any release matching the specification: ${range}`;
-        core.info(`Latest version matching specification: ${matchedVersion}`);
-        installDir = tc.find(ToolName, matchedVersion);
+        core.info(`Latest version matching specification: ${release.tag}`);
+        installDir = tc.find(ToolName, release.tag);
         /* If this version is not in the cache, download and install it */
         if (!installDir) {
-            core.info(`Version ${matchedVersion} is not cached, downloading`);
-            const url = await searcher.getDownloadUrl(client, matchedVersion);
+            core.info(`Version ${release.tag} is not cached, downloading`);
+            const url = await searcher.getDownloadUrl(client, release.id);
             if (!url)
                 throw `There are no prebuilt binaries for the current platform.`;
             const compilerDir = await downloadAndExtractCompiler(url);
-            installDir = await tc.cacheDir(compilerDir, ToolName, matchedVersion);
-            core.info(`Added ${matchedVersion} to cache`);
+            installDir = await tc.cacheDir(compilerDir, ToolName, release.tag);
+            core.info(`Added ${release.tag} to cache`);
         }
     }
     const { version, commit } = JSON.parse(await fs.readFile(path.join(installDir, 'release.json'), { encoding: 'utf8' }));
@@ -16037,13 +16037,13 @@ const SupportedManifestVersion = 0;
  * @param range - The semver range to match against.
  * @param repo - The repository to fetch versions from.
  *
- * @return The latest version matching the range. Null is returned if such
+ * @return The latest release matching the range. Null is returned if such
  *         version is not found.
  */
 async function findVersion(client, range, repo = DefaultRepo) {
-    for await (const releaseName of getReleases(client, repo)) {
-        if (semver.satisfies(releaseName, range, { includePrerelease: true }))
-            return releaseName;
+    for await (const release of getReleases(client, repo)) {
+        if (semver.satisfies(release.tag, range, { includePrerelease: true }))
+            return release;
     }
     return null;
 }
@@ -16052,13 +16052,12 @@ exports.findVersion = findVersion;
  * Retrieve the compiler binary download link for the current system.
  *
  * @param client - The Octokit client used to interact with Github.
- * @param release - The release name to download binaries for.
- * @param repo - The repository to download binaries from.
+ * @param releaseId - The unique release id to download binaries for.
  *
  * @return The link to download the binary for the current system, null if not available.
  */
-async function getDownloadUrl(client, release, repo = DefaultRepo) {
-    const manifestReq = await (new http_client_1.HttpClient()).get(await urlForAsset(client, repo, release, "manifest.json"));
+async function getDownloadUrl(client, releaseId) {
+    const manifestReq = await (new http_client_1.HttpClient()).get(await urlForAsset(client, releaseId, "manifest.json"));
     if (manifestReq.message.statusCode != http_client_1.HttpCodes.OK)
         throw `Fetching release manifest failed with status code: ${manifestReq.message.statusCode}`;
     const manifest = JSON.parse(await manifestReq.readBody());
@@ -16066,7 +16065,7 @@ async function getDownloadUrl(client, release, repo = DefaultRepo) {
         throw `Expected manifest version ${SupportedManifestVersion} but got ${manifest.manifestVersion}`;
     const targetBinary = manifest.binaries.find(x => tripletMatchesSystem(x.target));
     if (targetBinary)
-        return await urlForAsset(client, repo, release, targetBinary.name);
+        return await urlForAsset(client, releaseId, targetBinary.name);
     return null;
 }
 exports.getDownloadUrl = getDownloadUrl;
@@ -16074,18 +16073,16 @@ exports.getDownloadUrl = getDownloadUrl;
  * Retrieve the URL for a particular Github Release Asset.
  *
  * @param client - The Octokit client used to interact with Github.
- * @param repo - The repository to retrieve asset from.
- * @param release - The release name to get asset from.
+ * @param id - The release unique id.
  * @param asset - The exact name of the asset.
  *
  * @return The URL of the requested asset if it exists.
  */
-async function urlForAsset(client, repo, release, asset) {
-    const [owner, name] = repo.split('/');
-    const { repository: { release: { releaseAssets: { nodes: [{ downloadUrl }] } } } } = await client.graphql(`
-      query ($owner: String!, $name: String!, $releaseName: String!, $assetName: String!) {
-        repository(owner: $owner, name: $name) {
-          release(tagName: $releaseName) {
+async function urlForAsset(client, id, asset) {
+    const { node: { releaseAssets: { nodes: [{ downloadUrl }] } } } = await client.graphql(`
+      query ($id: ID!, $assetName: String!) {
+        node(id: $id) {
+          ... on Release {
             releaseAssets(first: 1, name: $assetName) {
               nodes {
                 downloadUrl
@@ -16095,9 +16092,7 @@ async function urlForAsset(client, repo, release, asset) {
         }
       }
     `, {
-        owner: owner,
-        name: name,
-        releaseName: release,
+        id: id,
         assetName: asset
     });
     return downloadUrl || null;
@@ -16189,26 +16184,26 @@ function tripletMatchesSystem(triplet) {
  * @param client - The authenticated octokit client.
  * @param repo - The repository to obtain release data from.
  *
- * @return The release name.
+ * @return The release tag name.
  */
 async function* getReleases(client, repo) {
     const [owner, name] = repo.split('/');
-    let hasPreviousPage = false;
+    let hasNextPage = false;
     do {
-        let startCursor = null;
+        let endCursor = null;
         const { repository: { releases: { edges: releaseEdges, pageInfo } } } = await client.graphql(`
-        query ($owner: String!, $name: String!, $startCursor: String) {
+        query ($owner: String!, $name: String!, $endCursor: String, $order: ReleaseOrder!) {
           repository(owner: $owner, name: $name) {
-            releases(before: $startCursor, last: 5) {
+            releases(after: $endCursor, last: 10, orderBy: $order) {
               edges {
                 node {
-                  name
+                  tagName
                 }
               }
 
               pageInfo {
-                startCursor
-                hasPreviousPage
+                endCursor
+                hasNextPage
               }
             }
           }
@@ -16216,13 +16211,17 @@ async function* getReleases(client, repo) {
       `, {
             owner: owner,
             name: name,
-            startCursor: startCursor
+            endCursor: endCursor,
+            order: {
+                direction: 'DESC',
+                field: 'CREATED_AT'
+            }
         });
-        ({ startCursor, hasPreviousPage } = pageInfo);
-        for (const { node: { name: releaseName } } of releaseEdges) {
-            yield releaseName;
+        ({ endCursor, hasNextPage } = pageInfo);
+        for (const { node: { id, tagName } } of releaseEdges) {
+            yield { id: id, tag: tagName };
         }
-    } while (hasPreviousPage);
+    } while (hasNextPage);
 }
 
 

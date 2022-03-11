@@ -48,16 +48,16 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
 
   /* If its not in the cache or an update is requested */
   if (!installDir || update) {
-    const matchedVersion = await searcher.findVersion(client, range);
-    if (!matchedVersion)
+    const release = await searcher.findVersion(client, range)
+    if (!release)
       throw `Could not find any release matching the specification: ${range}`;
-    core.info(`Latest version matching specification: ${matchedVersion}`);
+    core.info(`Latest version matching specification: ${release.tag}`);
 
-    installDir = tc.find(ToolName, matchedVersion);
+    installDir = tc.find(ToolName, release.tag);
     /* If this version is not in the cache, download and install it */
     if (!installDir) {
-      core.info(`Version ${matchedVersion} is not cached, downloading`);
-      const url = await searcher.getDownloadUrl(client, matchedVersion);
+      core.info(`Version ${release.tag} is not cached, downloading`);
+      const url = await searcher.getDownloadUrl(client, release.id);
       if (!url)
         throw `There are no prebuilt binaries for the current platform.`
 
@@ -66,9 +66,9 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
       installDir = await tc.cacheDir(
         compilerDir,
         ToolName,
-        matchedVersion
+        release.tag
       )
-      core.info(`Added ${matchedVersion} to cache`);
+      core.info(`Added ${release.tag} to cache`);
     }
   }
 

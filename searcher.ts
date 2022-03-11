@@ -33,6 +33,20 @@ interface ReleaseManifestV0 {
 }
 
 /**
+ * A release description
+ */
+export interface Release {
+  /**
+   * The UID of the release. This can be passed to Github to obtain more data.
+   */
+  id: string;
+  /**
+   * The tag of the release. For nimskull this is also the version
+   */
+  tag: string;
+}
+
+/**
  * Find the latest nimskull release matching the specified range.
  *
  * Pre-releases are included, as the project does not have any stable release
@@ -42,13 +56,13 @@ interface ReleaseManifestV0 {
  * @param range - The semver range to match against.
  * @param repo - The repository to fetch versions from.
  *
- * @return The latest version matching the range. Null is returned if such
+ * @return The latest release matching the range. Null is returned if such
  *         version is not found.
  */
-export async function findVersion(client: Octokit, range: string, repo = DefaultRepo): Promise<string | null> {
-  for await (const releaseName of getReleases(client, repo)) {
-    if (semver.satisfies(releaseName, range, { includePrerelease: true }))
-      return releaseName;
+export async function findVersion(client: Octokit, range: string, repo = DefaultRepo): Promise<Release | null> {
+  for await (const release of getReleases(client, repo)) {
+    if (semver.satisfies(release.tag, range, { includePrerelease: true }))
+      return release;
   }
 
   return null;
@@ -58,14 +72,13 @@ export async function findVersion(client: Octokit, range: string, repo = Default
  * Retrieve the compiler binary download link for the current system.
  *
  * @param client - The Octokit client used to interact with Github.
- * @param release - The release name to download binaries for.
- * @param repo - The repository to download binaries from.
+ * @param releaseId - The unique release id to download binaries for.
  *
  * @return The link to download the binary for the current system, null if not available.
  */
-export async function getDownloadUrl(client: Octokit, release: string, repo = DefaultRepo): Promise<string | null> {
+export async function getDownloadUrl(client: Octokit, releaseId: string): Promise<string | null> {
   const manifestReq = await (new HttpClient()).get(
-    await urlForAsset(client, repo, release, "manifest.json")
+    await urlForAsset(client, releaseId, "manifest.json")
   );
 
   if (manifestReq.message.statusCode != HttpCodes.OK)
@@ -77,7 +90,7 @@ export async function getDownloadUrl(client: Octokit, release: string, repo = De
 
   const targetBinary = manifest.binaries.find(x => tripletMatchesSystem(x.target));
   if (targetBinary)
-    return await urlForAsset(client, repo, release, targetBinary.name);
+    return await urlForAsset(client, releaseId, targetBinary.name);
 
   return null;
 }
@@ -86,33 +99,28 @@ export async function getDownloadUrl(client: Octokit, release: string, repo = De
  * Retrieve the URL for a particular Github Release Asset.
  *
  * @param client - The Octokit client used to interact with Github.
- * @param repo - The repository to retrieve asset from.
- * @param release - The release name to get asset from.
+ * @param id - The release unique id.
  * @param asset - The exact name of the asset.
  *
  * @return The URL of the requested asset if it exists.
  */
-async function urlForAsset(client: Octokit, repo: string, release: string,
+async function urlForAsset(client: Octokit, id: string,
                            asset: string): Promise<string> {
-  const [ owner, name ] = repo.split('/');
-
   const {
-    repository: {
-      release: {
-        releaseAssets: {
-          nodes: [
-            {
-              downloadUrl
-            }
-          ]
-        }
+    node: {
+      releaseAssets: {
+        nodes: [
+          {
+            downloadUrl
+          }
+        ]
       }
     }
   } = await client.graphql(
     `
-      query ($owner: String!, $name: String!, $releaseName: String!, $assetName: String!) {
-        repository(owner: $owner, name: $name) {
-          release(tagName: $releaseName) {
+      query ($id: ID!, $assetName: String!) {
+        node(id: $id) {
+          ... on Release {
             releaseAssets(first: 1, name: $assetName) {
               nodes {
                 downloadUrl
@@ -123,9 +131,7 @@ async function urlForAsset(client: Octokit, repo: string, release: string,
       }
     `,
     {
-      owner: owner,
-      name: name,
-      releaseName: release,
+      id: id,
       assetName: asset
     }
   );
@@ -227,14 +233,14 @@ function tripletMatchesSystem(triplet: string): boolean {
  * @param client - The authenticated octokit client.
  * @param repo - The repository to obtain release data from.
  *
- * @return The release name.
+ * @return The release tag name.
  */
-async function* getReleases(client: Octokit, repo: String): AsyncGenerator<string> {
+async function* getReleases(client: Octokit, repo: String): AsyncGenerator<Release> {
   const [ owner, name ] = repo.split('/');
 
-  let hasPreviousPage = false;
+  let hasNextPage = false;
   do {
-    let startCursor = null;
+    let endCursor = null;
     const {
       repository: {
         releases: {
@@ -244,18 +250,18 @@ async function* getReleases(client: Octokit, repo: String): AsyncGenerator<strin
       }
     } = await client.graphql(
       `
-        query ($owner: String!, $name: String!, $startCursor: String) {
+        query ($owner: String!, $name: String!, $endCursor: String, $order: ReleaseOrder!) {
           repository(owner: $owner, name: $name) {
-            releases(before: $startCursor, last: 5) {
+            releases(after: $endCursor, last: 10, orderBy: $order) {
               edges {
                 node {
-                  name
+                  tagName
                 }
               }
 
               pageInfo {
-                startCursor
-                hasPreviousPage
+                endCursor
+                hasNextPage
               }
             }
           }
@@ -264,14 +270,18 @@ async function* getReleases(client: Octokit, repo: String): AsyncGenerator<strin
       {
         owner: owner,
         name: name,
-        startCursor: startCursor
+        endCursor: endCursor,
+        order: {
+          direction: 'DESC',
+          field: 'CREATED_AT'
+        }
       }
     );
 
-    ({ startCursor, hasPreviousPage } = pageInfo);
+    ({ endCursor, hasNextPage } = pageInfo);
 
-    for (const { node: { name: releaseName } } of releaseEdges) {
-      yield releaseName;
+    for (const { node: { id, tagName } } of releaseEdges) {
+      yield {id: id, tag: tagName};
     }
-  } while (hasPreviousPage);
+  } while (hasNextPage);
 }
