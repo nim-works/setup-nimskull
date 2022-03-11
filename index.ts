@@ -10,6 +10,9 @@ import * as tc from '@actions/tool-cache';
 import * as searcher from './searcher.ts';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
+import * as exec from '@actions/exec';
+import { v4 as uuidgen } from 'uuid';
 import type { Octokit } from '@octokit/core';
 
 /**
@@ -58,28 +61,10 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
       if (!url)
         throw `There are no prebuilt binaries for the current platform.`
 
-      const downloadPath = await tc.downloadTool(url);
-      const extracted = downloadPath.endsWith('.zip') ?
-                        await tc.extractZip(downloadPath) :
-                        /* Make tar detects the compression type instead of
-                         * defaulting to gzip */
-                        await tc.extractTar(downloadPath, undefined, ['x']);
-
-      /* The archive consist of one top-level folder, which contains the
-       * compiler and tools. */
-      const files = await fs.readdir(extracted);
-      if (files.length !== 1)
-        throw `Expected 1 folder in extracted archive but got ${files.length}`;
-
-      const actualCompilerDir = path.join(
-        extracted,
-        /* Get the first (and only) directory name inside the extracted
-         * archive. */
-        files[0]!
-      );
+      const compilerDir = await downloadAndExtractCompiler(url);
 
       installDir = await tc.cacheDir(
-        actualCompilerDir,
+        compilerDir,
         ToolName,
         matchedVersion
       )
@@ -98,6 +83,38 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
   core.setOutput('binPath', binDir);
   core.setOutput('version', version);
   core.setOutput('commit', commit);
+}
+
+/**
+ * Download and extract the compiler
+ *
+ * @param url - The URL to download compiler from. Assumed to be a Github download URL.
+ * @return The extracted compiler directory.
+ */
+async function downloadAndExtractCompiler(url: string): Promise<string> {
+  const downloaded = await tc.downloadTool(url);
+
+  let result = '';
+  if (url.endsWith('.zip'))
+    result = await tc.extractZip(downloaded);
+  else {
+    const tarFile = path.join(process.env['RUNNER_TEMP'] || os.tmpdir(), uuidgen());
+
+    /* Un-zstd the archive manually as some tar versions doesn't support zstd */
+    await exec.exec('unzstd', [downloaded, '-o', tarFile])
+    result = await tc.extractTar(tarFile, undefined, ['x']);
+  }
+
+  /* The archive consist of one top-level folder, which contains the
+   * compiler and tools. */
+  const files = await fs.readdir(result);
+  if (files.length !== 1)
+    throw `Expected 1 folder in extracted archive but got ${files.length}`;
+
+  /* Set that folder as the result */
+  result = path.join(result, files[0]!);
+
+  return result
 }
 
 setup();
