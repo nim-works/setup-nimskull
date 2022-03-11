@@ -237,8 +237,10 @@ async function* getReleases(client: Octokit, repo: String): AsyncGenerator<strin
     let startCursor = null;
     const {
       repository: {
-        edges: releaseEdges,
-        pageInfo
+        releases: {
+          edges: releaseEdges,
+          pageInfo
+        }
       }
     } = await client.graphql(
       `

@@ -15535,7 +15535,7 @@ async function* getReleases(client, repo) {
     let hasPreviousPage = false;
     do {
         let startCursor = null;
-        const { repository: { edges: releaseEdges, pageInfo } } = await client.graphql(`
+        const { repository: { releases: { edges: releaseEdges, pageInfo } } } = await client.graphql(`
         query ($owner: String!, $name: String!, $startCursor: String) {
           repository(owner: $owner, name: $name) {
             releases(before: $startCursor, last: 5) {
