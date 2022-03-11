@@ -19,7 +19,7 @@ jobs:
         runner: [ubuntu-latest, macos-latest]
         spec:
           - 0.1.0-dev.20070
-          - *
+          - '*'
           - '>0.0.0'
           - '>0.1.0-dev.20066 <0.1.0-dev.20074'
         include:
