@@ -112,7 +112,7 @@ async function urlForAsset(client: Octokit, repo: string, release: string,
     }
   } = await client.graphql(
     `
-      query assetUrl(owner: String!, name: String!, releaseName: String!, assetName: String!) {
+      query assetUrl($owner: String!, $name: String!, $releaseName: String!, $assetName: String!) {
         repository(owner: $owner, name: $name) {
           release(tagName: $releaseName) {
             releaseAssets(first: 1, name: $assetName) {
@@ -246,7 +246,7 @@ async function* getReleases(client: Octokit, repo: String): AsyncGenerator<strin
       }
     } = await client.graphql(
       `
-        query getReleaseNames(owner: String!, name: String!, startCursor: String) {
+        query getReleaseNames($owner: String!, $name: String!, $startCursor: String) {
           repository(owner: $owner, name: $name) {
             releases(before: $startCursor, last: 5) {
               edges {
