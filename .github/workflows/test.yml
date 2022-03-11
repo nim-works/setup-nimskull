@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install for spec ${{ matrix.spec }}
         id: install
-        uses: .
+        uses: ./
         with:
           nimskull-version: ${{ matrix.spec }}
           check-latest: true
