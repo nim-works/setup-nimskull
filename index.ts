@@ -26,7 +26,7 @@ async function setup() {
     const version = core.getInput('nimskull-version');
     const update = core.getBooleanInput('check-latest');
 
-    setupCompiler(octokit, version, update);
+    await setupCompiler(octokit, version, update);
   } catch (error: any) {
     core.setFailed(error.message);
   }
