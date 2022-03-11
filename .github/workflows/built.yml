@@ -1,0 +1,26 @@
+# Copyright 2022 leorize <leorize+oss@disroot.org>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+name: Check if dist is up-to-date
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+        cache: 'npm'
+    - run: npm run build
+    - name: Check for differences between commit and built file
+      run: |
+        if ! git diff --exit-code -- dist; then
+          echo '::error::There are differences between commit and code built. Make sure that `npm run build` is run before commiting. Check log for more details.'
+          git diff -- dist
+          exit 1
+        fi
+      shell: bash

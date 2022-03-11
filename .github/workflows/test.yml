@@ -1,0 +1,57 @@
+# Copyright 2022 leorize <leorize+oss@disroot.org>
+#
+# SPDX-License-Identifier: MIT
+
+name: Test whether action works
+
+on:
+  push: {}
+  pull_request: {}
+
+  schedule:
+    # Run the check weekly so we can be sure that it still works
+    - cron: '0 0 * * 0'
+
+jobs:
+  check:
+    stategy:
+      matrix:
+        runner: [ubuntu-latest, macos-latest]
+        spec:
+          - 0.1.0-dev.20070
+          - *
+          - '>0.0.0'
+          - '>0.1.0-dev.20066 <0.1.0-dev.20074'
+        include:
+          - spec: 0.1.0-dev.20070
+            expect: 0.1.0-dev.20070
+          - spec: '>0.1.0-dev.20066 <0.1.0-dev.20074'
+            expect: 0.1.0-dev.20068
+
+    name: Test installation for spec ${{ matrix.spec }} on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install for spec ${{ matrix.spec }}
+        id: install
+        uses: .
+        with:
+          nimskull-version: ${{ matrix.spec }}
+          check-latest: true
+      - name: The installed version is incorrect
+        if: matrix.expect && matrix.expect != steps.install.outputs.version
+        run:
+          echo "::error::Expected version ${{ matrix.expect }} but got ${{ steps.install.outputs.version }}"
+          exit 1
+        shell: bash
+      - name: The compiler works
+        run:
+          nim --version
+
+          cat << "EOF" > test.nim
+          echo "Hello, world!"
+          EOF
+
+          nim c -r test.nim
+        shell: bash
