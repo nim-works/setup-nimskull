@@ -15296,7 +15296,7 @@ async function setupCompiler(client, range, update) {
                 await tc.extractZip(downloadPath) :
                 /* Make tar detects the compression type instead of
                  * defaulting to gzip */
-                await tc.extractTar(downloadPath, undefined, ['xa']);
+                await tc.extractTar(downloadPath, undefined, ['x']);
             /* The archive consist of one top-level folder, which contains the
              * compiler and tools. */
             const files = await fs.readdir(extracted);
