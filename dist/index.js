@@ -16194,7 +16194,7 @@ async function* getReleases(client, repo) {
         const { repository: { releases: { edges: releaseEdges, pageInfo } } } = await client.graphql(`
         query ($owner: String!, $name: String!, $endCursor: String, $order: ReleaseOrder!) {
           repository(owner: $owner, name: $name) {
-            releases(after: $endCursor, last: 10, orderBy: $order) {
+            releases(after: $endCursor, first: 10, orderBy: $order) {
               edges {
                 node {
                   tagName
