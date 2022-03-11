@@ -125,7 +125,7 @@ async function urlForAsset(client: Octokit, repo: string, release: string,
     {
       owner: owner,
       name: name,
-      tagName: release,
+      releaseName: release,
       assetName: asset
     }
   );

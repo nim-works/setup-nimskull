@@ -15436,7 +15436,7 @@ async function urlForAsset(client, repo, release, asset) {
     `, {
         owner: owner,
         name: name,
-        tagName: release,
+        releaseName: release,
         assetName: asset
     });
     return downloadUrl || null;
