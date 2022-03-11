@@ -26,7 +26,7 @@ jobs:
           - spec: 0.1.0-dev.20070
             expect: 0.1.0-dev.20070
           - spec: '>0.1.0-dev.20066 <0.1.0-dev.20074'
-            expect: 0.1.0-dev.20068
+            expect: 0.1.0-dev.20072
 
     name: Test installation for spec ${{ matrix.spec }} on ${{ matrix.runner }}
     runs-on: ${{ matrix.runner }}
@@ -41,7 +41,7 @@ jobs:
           check-latest: true
       - name: The installed version is incorrect
         if: matrix.expect && matrix.expect != steps.install.outputs.version
-        run:
+        run: |
           echo "::error::Expected version ${{ matrix.expect }} but got ${{ steps.install.outputs.version }}"
           exit 1
         shell: bash
