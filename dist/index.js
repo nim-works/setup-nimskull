@@ -15421,8 +15421,8 @@ exports.getDownloadUrl = getDownloadUrl;
  */
 async function urlForAsset(client, repo, release, asset) {
     const [owner, name] = repo.split('/');
-    const { assetUrl: { repository: { release: { releaseAssets: { nodes: [{ downloadUrl }] } } } } } = await client.graphql(`
-      query assetUrl($owner: String!, $name: String!, $releaseName: String!, $assetName: String!) {
+    const { repository: { release: { releaseAssets: { nodes: [{ downloadUrl }] } } } } = await client.graphql(`
+      query ($owner: String!, $name: String!, $releaseName: String!, $assetName: String!) {
         repository(owner: $owner, name: $name) {
           release(tagName: $releaseName) {
             releaseAssets(first: 1, name: $assetName) {
@@ -15535,8 +15535,8 @@ async function* getReleases(client, repo) {
     let hasPreviousPage = false;
     do {
         let startCursor = null;
-        const { getReleaseNames: { repository: { edges: releaseEdges, pageInfo } } } = await client.graphql(`
-        query getReleaseNames($owner: String!, $name: String!, $startCursor: String) {
+        const { repository: { edges: releaseEdges, pageInfo } } = await client.graphql(`
+        query ($owner: String!, $name: String!, $startCursor: String) {
           repository(owner: $owner, name: $name) {
             releases(before: $startCursor, last: 5) {
               edges {
