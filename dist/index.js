@@ -16197,6 +16197,7 @@ async function* getReleases(client, repo) {
             releases(after: $endCursor, first: 10, orderBy: $order) {
               edges {
                 node {
+                  id
                   tagName
                 }
               }

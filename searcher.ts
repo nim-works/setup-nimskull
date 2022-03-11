@@ -255,6 +255,7 @@ async function* getReleases(client: Octokit, repo: String): AsyncGenerator<Relea
             releases(after: $endCursor, first: 10, orderBy: $order) {
               edges {
                 node {
+                  id
                   tagName
                 }
               }
