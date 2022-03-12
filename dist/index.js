@@ -15912,6 +15912,10 @@ async function setup() {
         const version = core.getInput('nimskull-version');
         const update = core.getBooleanInput('check-latest');
         await setupCompiler(octokit, version, update);
+        /* Since the JS being run will be in dist/, back out one folder to get the root */
+        const actionRoot = path.join(__dirname, '..');
+        core.info('::add-matcher::' +
+            path.join(actionRoot, '.github', 'nimskull-problem-matcher.json'));
     }
     catch (error) {
         core.setFailed(error.message);

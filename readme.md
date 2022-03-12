@@ -7,6 +7,12 @@ SPDX-License-Identifier: GPL-3.0-only
 # Setup Nimskull
 
 An action for setting up the Nimskull environment for use within Github Actions.
+Currently, the action does the following:
+
+- Download and install a version of nimskull according to given spec and add it
+  to `PATH`.
+
+- Register problem matchers for error outputs.
 
 # Usage
 
