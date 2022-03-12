@@ -55,3 +55,16 @@ jobs:
 
           nim c -r test.nim
         shell: bash
+
+  success:
+    name: All action tests passed
+    needs: [check]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Raise failure
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::There are failing required jobs"
+          exit 1
