@@ -235,12 +235,12 @@ function tripletMatchesSystem(triplet: string): boolean {
  *
  * @return The release tag name.
  */
-async function* getReleases(client: Octokit, repo: String): AsyncGenerator<Release> {
+async function* getReleases(client: Octokit, repo: string): AsyncGenerator<Release> {
   const [ owner, name ] = repo.split('/');
 
-  let hasNextPage = false;
-  do {
-    let endCursor = null;
+  let endCursor = null;
+  let hasNextPage = true;
+  while (hasNextPage) {
     const {
       repository: {
         releases: {
@@ -248,7 +248,7 @@ async function* getReleases(client: Octokit, repo: String): AsyncGenerator<Relea
           pageInfo
         }
       }
-    } = await client.graphql(
+    }: any = await client.graphql(
       `
         query ($owner: String!, $name: String!, $endCursor: String, $order: ReleaseOrder!) {
           repository(owner: $owner, name: $name) {
@@ -284,5 +284,5 @@ async function* getReleases(client: Octokit, repo: String): AsyncGenerator<Relea
     for (const { node: { id, tagName } } of releaseEdges) {
       yield {id: id, tag: tagName};
     }
-  } while (hasNextPage);
+  }
 }
