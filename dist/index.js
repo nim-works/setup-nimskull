@@ -16192,9 +16192,9 @@ function tripletMatchesSystem(triplet) {
  */
 async function* getReleases(client, repo) {
     const [owner, name] = repo.split('/');
-    let hasNextPage = false;
-    do {
-        let endCursor = null;
+    let endCursor = null;
+    let hasNextPage = true;
+    while (hasNextPage) {
         const { repository: { releases: { edges: releaseEdges, pageInfo } } } = await client.graphql(`
         query ($owner: String!, $name: String!, $endCursor: String, $order: ReleaseOrder!) {
           repository(owner: $owner, name: $name) {
@@ -16226,7 +16226,7 @@ async function* getReleases(client, repo) {
         for (const { node: { id, tagName } } of releaseEdges) {
             yield { id: id, tag: tagName };
         }
-    } while (hasNextPage);
+    }
 }
 
 
