@@ -60,9 +60,13 @@ export interface Release {
  *         version is not found.
  */
 export async function findVersion(client: Octokit, range: string, repo = DefaultRepo): Promise<Release | null> {
-  for await (const release of getReleases(client, repo)) {
-    if (semver.satisfies(release.tag, range, { includePrerelease: true }))
-      return release;
+  if (!isSpecificVersion(range)) {
+    for await (const release of getReleases(client, repo)) {
+      if (semver.satisfies(release.tag, range, { includePrerelease: true }))
+        return release;
+    }
+  } else {
+    return getRelease(client, repo, range);
   }
 
   return null;
@@ -285,4 +289,49 @@ async function* getReleases(client: Octokit, repo: string): AsyncGenerator<Relea
       yield {id: id, tag: tagName};
     }
   }
+}
+
+/**
+ * Obtain release description of the given tag
+ *
+ * @param client - The authenticated octokit client.
+ * @param repo - The repository to obtain release data from.
+ * @param tagName - The tag to get release data of.
+ *
+ * @return The release info.
+ */
+async function getRelease(client: Octokit, repo: string, tagName: string): Promise<Release | null> {
+  const [ owner, name ] = repo.split('/');
+
+  const {
+    repository: {
+      release: {
+        id
+      }
+    }
+  } = await client.graphql(
+    `
+      query ($owner: String!, $name: String!, $tagName: String!) {
+        repository(owner: $owner, name: $name) {
+          release(tagName: $tagName) {
+            id
+          }
+        }
+      }
+    `,
+    {
+      owner: owner,
+      name: name,
+      tagName: tagName
+    }
+  );
+
+  return id ? { id: id, tag: tagName } : null;
+}
+
+/**
+ * Returns whether `s` is a specific version
+ */
+function isSpecificVersion(s: string): boolean {
+  return typeof(semver.valid(s)) === 'string';
 }

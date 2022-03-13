@@ -16045,9 +16045,14 @@ const SupportedManifestVersion = 0;
  *         version is not found.
  */
 async function findVersion(client, range, repo = DefaultRepo) {
-    for await (const release of getReleases(client, repo)) {
-        if (semver.satisfies(release.tag, range, { includePrerelease: true }))
-            return release;
+    if (!isSpecificVersion(range)) {
+        for await (const release of getReleases(client, repo)) {
+            if (semver.satisfies(release.tag, range, { includePrerelease: true }))
+                return release;
+        }
+    }
+    else {
+        return getRelease(client, repo, range);
     }
     return null;
 }
@@ -16227,6 +16232,38 @@ async function* getReleases(client, repo) {
             yield { id: id, tag: tagName };
         }
     }
+}
+/**
+ * Obtain release description of the given tag
+ *
+ * @param client - The authenticated octokit client.
+ * @param repo - The repository to obtain release data from.
+ * @param tagName - The tag to get release data of.
+ *
+ * @return The release info.
+ */
+async function getRelease(client, repo, tagName) {
+    const [owner, name] = repo.split('/');
+    const { repository: { release: { id } } } = await client.graphql(`
+      query ($owner: String!, $name: String!, $tagName: String!) {
+        repository(owner: $owner, name: $name) {
+          release(tagName: $tagName) {
+            id
+          }
+        }
+      }
+    `, {
+        owner: owner,
+        name: name,
+        tagName: tagName
+    });
+    return id ? { id: id, tag: tagName } : null;
+}
+/**
+ * Returns whether `s` is a specific version
+ */
+function isSpecificVersion(s) {
+    return typeof (semver.valid(s)) === 'string';
 }
 
 
