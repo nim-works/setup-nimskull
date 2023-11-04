@@ -17,20 +17,22 @@
   },
   "homepage": "https://github.com/alaviss/setup-nimskull#readme",
   "devDependencies": {
-    "@types/node": "^17.0.21",
-    "@types/semver": "^7.3.9",
-    "@types/uuid": "^8.3.4",
-    "@vercel/ncc": "^0.33.3",
-    "typescript": "^4.6.2"
+    "@octokit/graphql-schema": "^14.40.1",
+    "@tsconfig/strictest": "^2.0.2",
+    "@types/node": "^20.8.10",
+    "@types/semver": "^7.5.4",
+    "@types/uuid": "^9.0.6",
+    "@vercel/ncc": "^0.38.1",
+    "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@actions/core": "^1.6.0",
-    "@actions/exec": "^1.1.0",
-    "@actions/github": "^5.0.0",
-    "@actions/http-client": "^1.0.11",
-    "@actions/tool-cache": "^1.7.1",
-    "@tsconfig/node16-strictest": "^1.0.0",
-    "semver": "^7.3.5",
-    "uuid": "^8.3.2"
+    "@actions/core": "^1.10.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^6.0.0",
+    "@actions/http-client": "^2.2.0",
+    "@actions/tool-cache": "^2.0.1",
+    "@tsconfig/node20": "^20.1.2",
+    "semver": "^7.5.4",
+    "uuid": "^9.0.1"
   }
 }

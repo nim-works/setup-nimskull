@@ -8,12 +8,13 @@
  * Implements a simple searcher for a nimskull release via Github Release.
  */
 
-import * as semver from 'semver';
-import * as os from 'os';
-import { HttpClient, HttpCodes } from '@actions/http-client';
-import type { Octokit } from '@octokit/core';
+import * as semver from "semver";
+import * as os from "os";
+import { HttpClient, HttpCodes } from "@actions/http-client";
+import type { Octokit } from "@octokit/core";
+import { Release as GhRelease, Repository } from "@octokit/graphql-schema";
 
-const DefaultRepo = 'nim-works/nimskull';
+const DefaultRepo = "nim-works/nimskull";
 const SupportedManifestVersion = 0;
 
 interface ArtifactDataV0 {
@@ -59,7 +60,11 @@ export interface Release {
  * @return The latest release matching the range. Null is returned if such
  *         version is not found.
  */
-export async function findVersion(client: Octokit, range: string, repo = DefaultRepo): Promise<Release | null> {
+export async function findVersion(
+  client: Octokit,
+  range: string,
+  repo = DefaultRepo,
+): Promise<Release | null> {
   if (!isSpecificVersion(range)) {
     for await (const release of getReleases(client, repo)) {
       if (semver.satisfies(release.tag, range, { includePrerelease: true }))
@@ -80,9 +85,12 @@ export async function findVersion(client: Octokit, range: string, repo = Default
  *
  * @return The link to download the binary for the current system, null if not available.
  */
-export async function getDownloadUrl(client: Octokit, releaseId: string): Promise<string | null> {
-  const manifestReq = await (new HttpClient()).get(
-    await urlForAsset(client, releaseId, "manifest.json")
+export async function getDownloadUrl(
+  client: Octokit,
+  releaseId: string,
+): Promise<string | null> {
+  const manifestReq = await new HttpClient().get(
+    await urlForAsset(client, releaseId, "manifest.json"),
   );
 
   if (manifestReq.message.statusCode != HttpCodes.OK)
@@ -92,7 +100,9 @@ export async function getDownloadUrl(client: Octokit, releaseId: string): Promis
   if (manifest.manifestVersion != SupportedManifestVersion)
     throw `Expected manifest version ${SupportedManifestVersion} but got ${manifest.manifestVersion}`;
 
-  const targetBinary = manifest.binaries.find(x => tripletMatchesSystem(x.target));
+  const targetBinary = manifest.binaries.find((x) =>
+    tripletMatchesSystem(x.target),
+  );
   if (targetBinary)
     return await urlForAsset(client, releaseId, targetBinary.name);
 
@@ -108,19 +118,16 @@ export async function getDownloadUrl(client: Octokit, releaseId: string): Promis
  *
  * @return The URL of the requested asset if it exists.
  */
-async function urlForAsset(client: Octokit, id: string,
-                           asset: string): Promise<string> {
+async function urlForAsset(
+  client: Octokit,
+  id: string,
+  asset: string,
+): Promise<string> {
   const {
     node: {
-      releaseAssets: {
-        nodes: [
-          {
-            downloadUrl
-          }
-        ]
-      }
-    }
-  } = await client.graphql(
+      releaseAssets: { nodes },
+    },
+  } = await client.graphql<{ node: GhRelease }>(
     `
       query ($id: ID!, $assetName: String!) {
         node(id: $id) {
@@ -136,11 +143,11 @@ async function urlForAsset(client: Octokit, id: string,
     `,
     {
       id: id,
-      assetName: asset
-    }
+      assetName: asset,
+    },
   );
 
-  return downloadUrl || null;
+  return nodes?.[0]?.downloadUrl ?? null;
 }
 
 /**
@@ -152,28 +159,23 @@ async function urlForAsset(client: Octokit, id: string,
  *         This only covers targets that are likely to be run in CI.
  */
 function tripletMatchesSystem(triplet: string): boolean {
-  if (!triplet)
-    return false;
+  if (!triplet) return false;
 
-  const splitted = triplet.split('-');
+  const splitted = triplet.split("-");
 
   /* If the architecture part is not defined, the triplet is invalid */
-  if (!splitted[0])
-    return false;
+  if (!splitted[0]) return false;
 
   /* Process architecture */
   switch (os.arch()) {
-    case 'arm':
-      if (!splitted[0].match(/arm/))
-        return false;
+    case "arm":
+      if (!splitted[0].match(/arm/)) return false;
       break;
-    case 'arm64':
-      if (splitted[0] !== 'aarch64')
-        return false;
+    case "arm64":
+      if (splitted[0] !== "aarch64") return false;
       break;
-    case 'x64':
-      if (splitted[0] !== 'x86_64')
-        return false;
+    case "x64":
+      if (splitted[0] !== "x86_64") return false;
       break;
     default:
       /* If it's an architecture that we do not know of, assume that the
@@ -185,45 +187,38 @@ function tripletMatchesSystem(triplet: string): boolean {
   if (scanPos < splitted.length) {
     /* Process vendor */
     switch (splitted[scanPos]) {
-      case 'pc':
+      case "pc":
         /* Assume Darwin to be the macOS runner, which should match against
          * 'apple' vendor */
-        if (os.platform() === 'darwin')
-          return false;
+        if (os.platform() === "darwin") return false;
         scanPos++;
         break;
-      case 'apple':
-        if (os.platform() !== 'darwin')
-          return false;
+      case "apple":
+        if (os.platform() !== "darwin") return false;
         scanPos++;
         break;
     }
 
     /* Process OS */
     switch (splitted[scanPos]) {
-      case 'darwin':
-      case 'macosx':
-        if (os.platform() !== 'darwin')
-          return false;
+      case "darwin":
+      case "macosx":
+        if (os.platform() !== "darwin") return false;
         scanPos++;
         break;
-      case 'linux':
-        if (os.platform() !== 'linux')
-          return false;
+      case "linux":
+        if (os.platform() !== "linux") return false;
         scanPos++;
         /* Process environment (if any), accept only the version using GNU ABI */
         if (splitted[scanPos])
-          if (!splitted[scanPos]!.match(/gnu/))
-            return false;
+          if (!splitted[scanPos]!.match(/gnu/)) return false;
         break;
-      case 'windows':
-        if (os.platform() !== 'win32')
-          return false;
+      case "windows":
+        if (os.platform() !== "win32") return false;
         scanPos++;
         /* Process environment (if any), accept only the version using GNU ABI */
         if (splitted[scanPos])
-          if (!splitted[scanPos]!.match(/gnu/))
-            return false;
+          if (!splitted[scanPos]!.match(/gnu/)) return false;
         break;
     }
   }
@@ -239,20 +234,20 @@ function tripletMatchesSystem(triplet: string): boolean {
  *
  * @return The release tag name.
  */
-async function* getReleases(client: Octokit, repo: string): AsyncGenerator<Release> {
-  const [ owner, name ] = repo.split('/');
+async function* getReleases(
+  client: Octokit,
+  repo: string,
+): AsyncGenerator<Release> {
+  const [owner, name] = repo.split("/");
 
-  let endCursor = null;
+  let endCursor: string | undefined;
   let hasNextPage = true;
   while (hasNextPage) {
     const {
       repository: {
-        releases: {
-          edges: releaseEdges,
-          pageInfo
-        }
-      }
-    }: any = await client.graphql(
+        releases: { edges: releaseEdges, pageInfo },
+      },
+    } = await client.graphql<{ repository: Repository }>(
       `
         query ($owner: String!, $name: String!, $endCursor: String, $order: ReleaseOrder!) {
           repository(owner: $owner, name: $name) {
@@ -273,20 +268,25 @@ async function* getReleases(client: Octokit, repo: string): AsyncGenerator<Relea
         }
       `,
       {
-        owner: owner,
-        name: name,
-        endCursor: endCursor,
+        owner,
+        name,
+        endCursor,
         order: {
-          direction: 'DESC',
-          field: 'CREATED_AT'
-        }
-      }
+          direction: "DESC",
+          field: "CREATED_AT",
+        },
+      },
     );
 
-    ({ endCursor, hasNextPage } = pageInfo);
+    hasNextPage = pageInfo.hasNextPage;
+    endCursor = pageInfo.endCursor ?? undefined;
 
-    for (const { node: { id, tagName } } of releaseEdges) {
-      yield {id: id, tag: tagName};
+    if (releaseEdges) {
+      for (const release of releaseEdges) {
+        if (release?.node) {
+          yield { id: release.node.id, tag: release.node.tagName };
+        }
+      }
     }
   }
 }
@@ -300,16 +300,16 @@ async function* getReleases(client: Octokit, repo: string): AsyncGenerator<Relea
  *
  * @return The release info.
  */
-async function getRelease(client: Octokit, repo: string, tagName: string): Promise<Release | null> {
-  const [ owner, name ] = repo.split('/');
+async function getRelease(
+  client: Octokit,
+  repo: string,
+  tagName: string,
+): Promise<Release | null> {
+  const [owner, name] = repo.split("/");
 
   const {
-    repository: {
-      release: {
-        id
-      }
-    }
-  } = await client.graphql(
+    repository: { release },
+  } = await client.graphql<{ repository: Repository }>(
     `
       query ($owner: String!, $name: String!, $tagName: String!) {
         repository(owner: $owner, name: $name) {
@@ -322,16 +322,16 @@ async function getRelease(client: Octokit, repo: string, tagName: string): Promi
     {
       owner: owner,
       name: name,
-      tagName: tagName
-    }
+      tagName: tagName,
+    },
   );
 
-  return id ? { id: id, tag: tagName } : null;
+  return release ? { id: release.id, tag: tagName } : null;
 }
 
 /**
  * Returns whether `s` is a specific version
  */
 function isSpecificVersion(s: string): boolean {
-  return typeof(semver.valid(s)) === 'string';
+  return typeof semver.valid(s) === "string";
 }

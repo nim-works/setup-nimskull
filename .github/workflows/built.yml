@@ -11,18 +11,18 @@ jobs:
     name: Built JS is up-to-date with source
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-        cache: 'npm'
-    - run: npm install
-    - run: npm run build
-    - name: Check for differences between commit and built file
-      run: |
-        if ! git diff --exit-code -- dist; then
-          echo '::error::There are differences between commit and code built. Make sure that `npm run build` is run before commiting. Check log for more details.'
-          git diff -- dist
-          exit 1
-        fi
-      shell: bash
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm install
+      - run: npm run build
+      - name: Check for differences between commit and built file
+        run: |
+          if ! git diff --exit-code -- dist; then
+            echo '::error::There are differences between commit and code built. Make sure that `npm run build` is run before commiting. Check log for more details.'
+            git diff -- dist
+            exit 1
+          fi
+        shell: bash

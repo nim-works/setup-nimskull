@@ -4,38 +4,38 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-import * as core from '@actions/core';
-import * as gh from '@actions/github';
-import * as tc from '@actions/tool-cache';
-import * as searcher from './searcher.ts';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
-import * as exec from '@actions/exec';
-import { v4 as uuidgen } from 'uuid';
-import type { Octokit } from '@octokit/core';
+import * as core from "@actions/core";
+import * as gh from "@actions/github";
+import * as tc from "@actions/tool-cache";
+import * as searcher from "./searcher";
+import * as fs from "fs/promises";
+import * as path from "path";
+import * as os from "os";
+import * as exec from "@actions/exec";
+import { v4 as uuidgen } from "uuid";
+import { Octokit } from "@octokit/core";
 
 /**
  * The name of the tool being setup.
  */
-const ToolName = 'nimskull';
+const ToolName = "nimskull";
 
 /**
  * Entry point for the script
  */
 async function setup() {
   try {
-    const octokit = gh.getOctokit(core.getInput('token'));
-    const version = core.getInput('nimskull-version');
-    const update = core.getBooleanInput('check-latest');
+    const octokit = gh.getOctokit(core.getInput("token"));
+    const version = core.getInput("nimskull-version");
+    const update = core.getBooleanInput("check-latest");
 
     await setupCompiler(octokit, version, update);
 
     /* Since the JS being run will be in dist/, back out one folder to get the root */
-    const actionRoot = path.join(__dirname, '..')
+    const actionRoot = path.join(__dirname, "..");
     core.info(
-      '::add-matcher::' +
-      path.join(actionRoot, '.github', 'nimskull-problem-matcher.json')
+      "::add-matcher::" +
+        path.join(actionRoot, ".github", "nimskull-problem-matcher.json"),
     );
   } catch (error: any) {
     core.setFailed(error.message);
@@ -55,7 +55,7 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
 
   /* If its not in the cache or an update is requested */
   if (!installDir || update) {
-    const release = await searcher.findVersion(client, range)
+    const release = await searcher.findVersion(client, range);
     if (!release)
       throw `Could not find any release matching the specification: ${range}`;
     core.info(`Latest version matching specification: ${release.tag}`);
@@ -66,30 +66,28 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
       core.info(`Version ${release.tag} is not cached, downloading`);
       const url = await searcher.getDownloadUrl(client, release.id);
       if (!url)
-        throw `There are no prebuilt binaries for the current platform.`
+        throw `There are no prebuilt binaries for the current platform.`;
 
       const compilerDir = await downloadAndExtractCompiler(url);
 
-      installDir = await tc.cacheDir(
-        compilerDir,
-        ToolName,
-        release.tag
-      )
+      installDir = await tc.cacheDir(compilerDir, ToolName, release.tag);
       core.info(`Added ${release.tag} to cache`);
     }
   }
 
   const { version, commit } = JSON.parse(
-    await fs.readFile(path.join(installDir, 'release.json'), { encoding: 'utf8' })
+    await fs.readFile(path.join(installDir, "release.json"), {
+      encoding: "utf8",
+    }),
   );
 
-  const binDir = path.join(installDir, 'bin');
+  const binDir = path.join(installDir, "bin");
   core.addPath(binDir);
 
-  core.setOutput('path', installDir);
-  core.setOutput('binPath', binDir);
-  core.setOutput('version', version);
-  core.setOutput('commit', commit);
+  core.setOutput("path", installDir);
+  core.setOutput("binPath", binDir);
+  core.setOutput("version", version);
+  core.setOutput("commit", commit);
 }
 
 /**
@@ -101,15 +99,17 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
 async function downloadAndExtractCompiler(url: string): Promise<string> {
   const downloaded = await tc.downloadTool(url);
 
-  let result = '';
-  if (url.endsWith('.zip'))
-    result = await tc.extractZip(downloaded);
+  let result = "";
+  if (url.endsWith(".zip")) result = await tc.extractZip(downloaded);
   else {
-    const tarFile = path.join(process.env['RUNNER_TEMP'] || os.tmpdir(), uuidgen());
+    const tarFile = path.join(
+      process.env["RUNNER_TEMP"] || os.tmpdir(),
+      uuidgen(),
+    );
 
     /* Un-zstd the archive manually as some tar versions doesn't support zstd */
-    await exec.exec('unzstd', [downloaded, '-o', tarFile])
-    result = await tc.extractTar(tarFile, undefined, ['x']);
+    await exec.exec("unzstd", [downloaded, "-o", tarFile]);
+    result = await tc.extractTar(tarFile, undefined, ["x"]);
   }
 
   /* The archive consist of one top-level folder, which contains the
@@ -121,7 +121,7 @@ async function downloadAndExtractCompiler(url: string): Promise<string> {
   /* Set that folder as the result */
   result = path.join(result, files[0]!);
 
-  return result
+  return result;
 }
 
 setup();
