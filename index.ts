@@ -12,6 +12,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
 import * as exec from "@actions/exec";
+import { fileURLToPath } from "url";
 import { v4 as uuidgen } from "uuid";
 import { Octokit } from "@octokit/core";
 
@@ -25,14 +26,17 @@ const ToolName = "nimskull";
  */
 async function setup() {
   try {
-    const octokit = gh.getOctokit(core.getInput("token"));
-    const version = core.getInput("nimskull-version");
+    const octokit = gh.getOctokit(core.getInput("token"), { required: true });
+    const version = core.getInput("nimskull-version", { required: true });
     const update = core.getBooleanInput("check-latest");
 
     await setupCompiler(octokit, version, update);
 
     /* Since the JS being run will be in dist/, back out one folder to get the root */
-    const actionRoot = path.join(__dirname, "..");
+    const actionRoot = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "..",
+    );
     core.info(
       "::add-matcher::" +
         path.join(actionRoot, ".github", "nimskull-problem-matcher.json"),
@@ -63,7 +67,7 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
     installDir = tc.find(ToolName, release.tag);
     /* If this version is not in the cache, download and install it */
     if (!installDir) {
-      core.info(`Version ${release.tag} is not cached, downloading`);
+      core.info(`Version ${release.tag} is not in tool cache, downloading`);
       const url = await searcher.getDownloadUrl(client, release.id);
       if (!url)
         throw `There are no prebuilt binaries for the current platform.`;
@@ -71,7 +75,7 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
       const compilerDir = await downloadAndExtractCompiler(url);
 
       installDir = await tc.cacheDir(compilerDir, ToolName, release.tag);
-      core.info(`Added ${release.tag} to cache`);
+      core.info(`Added ${release.tag} to tool cache`);
     }
   }
 
@@ -85,9 +89,9 @@ async function setupCompiler(client: Octokit, range: string, update: boolean) {
   core.addPath(binDir);
 
   core.setOutput("path", installDir);
-  core.setOutput("binPath", binDir);
-  core.setOutput("version", version);
-  core.setOutput("commit", commit);
+  core.setOutput("bin-path", binDir);
+  core.setOutput("nimskull-version", version);
+  core.setOutput("nimskull-commit", commit);
 }
 
 /**
