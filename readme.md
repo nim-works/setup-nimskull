@@ -24,10 +24,10 @@ See [action.yml](action.yml) for all supported inputs and outputs.
 # SPDX-License-Identifier: CC0-1.0
 
 steps:
-  - uses: actions/checkout@v3
-  - uses: alaviss/setup-nimskull@main
+  - uses: actions/checkout@v4
+  - uses: nim-works/setup-nimskull@0.1.0
     with:
-      nimskull-version: '*' # The nimskull version to download, supports semver specification
+      nimskull-version: "*" # The nimskull version to download, supports semver specification
 ```
 
 # License
