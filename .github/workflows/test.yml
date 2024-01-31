@@ -13,7 +13,27 @@ on:
     - cron: "0 0 * * 0"
 
 jobs:
+  filter:
+    name: Check if tests should be run
+    runs-on: ubuntu-latest
+    outputs:
+      should-skip: ${{ steps.filter.should_skip }}
+
+    steps:
+      - uses: fkirc/skip-duplicate-actions@v5.3.1
+        id: filter
+        with:
+          # Only run when code used by the action changed.
+          paths: |
+            [
+              "dist/**",
+              ".github/nimskull-problem-matcher.json",
+              ".github/workflows/test.yml"
+            ]
+
   check:
+    needs: filter
+    if: needs.filter.outputs.should-skip != 'true'
     strategy:
       matrix:
         runner: [ubuntu-latest, macos-latest, windows-latest]
@@ -65,14 +85,11 @@ jobs:
   success:
     name: All action tests passed
     needs: [check]
-    if: always()
+    if: cancelled() || failure()
     runs-on: ubuntu-latest
 
     steps:
       - name: Raise failure
-        if: |
-          contains(needs.*.result, 'failure') ||
-          contains(needs.*.result, 'cancelled')
         run: |
           echo "::error::There are failing required jobs"
           exit 1
