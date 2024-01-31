@@ -17,7 +17,7 @@ jobs:
     name: Check if tests should be run
     runs-on: ubuntu-latest
     outputs:
-      should-skip: ${{ steps.filter.should_skip }}
+      should-skip: ${{ steps.filter.outputs.should_skip }}
 
     steps:
       - uses: fkirc/skip-duplicate-actions@v5.3.1
