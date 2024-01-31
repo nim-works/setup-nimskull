@@ -2,28 +2,38 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-name: Setup Nimskull environment
-description: Setup a Nimskull environment then add it to PATH
+name: Setup Nimskull
+description: Setup a Nimskull development environment
+branding:
+  color: blue
+  icon: code
+
 inputs:
   token:
     description: The Github token to retrieve data from nimskull repository
+    required: true
     default: ${{ github.token }}
   nimskull-version:
-    description: The semver specification for nimskull version to use. Defaults to any version
-    default: '*'
+    description:
+      The semver specification for nimskull version to use. Defaults to any
+      version
+    required: true
+    default: "*"
   check-latest:
-    description: Whether to always check for the latest version satisfying the given spec. Defaults to true as nimskull is still in pre-alpha status.
-    default: true
+    description:
+      Whether to always check for the latest version satisfying the given spec.
+      Defaults to true as nimskull is still in pre-alpha status.
+    default: "true"
 outputs:
   path:
     description: The resulting installation location
-  binPath:
+  bin-path:
     description: Where binaries were installed
-  version:
-    description: The installed version
-  commit:
+  nimskull-version:
+    description: The installed nimskull version
+  nimskull-commit:
     description: The commit of the compiler
 
 runs:
-  using: 'node16'
-  main: 'dist/index.js'
+  using: "node20"
+  main: "dist/index.js"

@@ -251,7 +251,7 @@ async function* getReleases(
       `
         query ($owner: String!, $name: String!, $endCursor: String, $order: ReleaseOrder!) {
           repository(owner: $owner, name: $name) {
-            releases(after: $endCursor, first: 10, orderBy: $order) {
+            releases(after: $endCursor, first: 100, orderBy: $order) {
               edges {
                 node {
                   id

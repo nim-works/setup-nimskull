@@ -22,7 +22,6 @@ jobs:
         run: |
           if ! git diff --exit-code -- dist; then
             echo '::error::There are differences between commit and code built. Make sure that `npm run build` is run before commiting. Check log for more details.'
-            git diff -- dist
             exit 1
           fi
         shell: bash

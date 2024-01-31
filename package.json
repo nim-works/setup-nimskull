@@ -2,9 +2,10 @@
   "name": "setup-nimskull",
   "version": "0.1.0",
   "description": "Github Action to setup a Nimskull environment",
+  "type": "module",
   "main": "index.ts",
   "scripts": {
-    "build": "ncc build index.ts -o dist"
+    "build": "ncc build index.ts -o dist -m -s"
   },
   "repository": {
     "type": "git",
@@ -17,13 +18,13 @@
   },
   "homepage": "https://github.com/alaviss/setup-nimskull#readme",
   "devDependencies": {
-    "@octokit/graphql-schema": "^14.40.1",
+    "@octokit/graphql-schema": "^14.52.0",
     "@tsconfig/strictest": "^2.0.2",
-    "@types/node": "^20.8.10",
-    "@types/semver": "^7.5.4",
-    "@types/uuid": "^9.0.6",
+    "@types/node": "^20.11.13",
+    "@types/semver": "^7.5.6",
+    "@types/uuid": "^9.0.8",
     "@vercel/ncc": "^0.38.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@actions/core": "^1.10.1",
