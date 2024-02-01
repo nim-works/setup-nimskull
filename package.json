@@ -20,7 +20,7 @@
   "devDependencies": {
     "@octokit/graphql-schema": "^14.53.0",
     "@tsconfig/strictest": "^2.0.2",
-    "@types/node": "^20.11.14",
+    "@types/node": "^20.11.16",
     "@types/semver": "^7.5.6",
     "@types/uuid": "^9.0.8",
     "@vercel/ncc": "^0.38.1",
