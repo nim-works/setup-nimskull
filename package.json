@@ -1,6 +1,6 @@
 {
   "name": "setup-nimskull",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Github Action to setup a Nimskull environment",
   "type": "module",
   "main": "index.ts",
