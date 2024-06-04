@@ -36,20 +36,27 @@ jobs:
     if: needs.filter.outputs.should-skip != 'true'
     strategy:
       matrix:
-        runner: [ubuntu-latest, macos-latest, windows-latest]
+        runner: [ubuntu-latest, macos-latest, macos-13, windows-latest]
         spec:
-          - 0.1.0-dev.21195
+          - 0.1.0-dev.21199
           - "*"
           - ">0.0.0"
           - ">0.1.0-dev.20066 <0.1.0-dev.20074"
+          - ">0.1.0-dev.21330 <0.1.0-dev.21332"
         include:
-          - spec: 0.1.0-dev.21195
-            expect: 0.1.0-dev.21195
+          - spec: 0.1.0-dev.21199
+            expect: 0.1.0-dev.21199
           - spec: ">0.1.0-dev.20066 <0.1.0-dev.20074"
             expect: 0.1.0-dev.20072
+          - spec: ">0.1.0-dev.21330 <0.1.0-dev.21332"
+            expect: 0.1.0-dev.21331
         exclude:
           # Windows is not supported by this version
           - runner: windows-latest
+            spec: ">0.1.0-dev.20066 <0.1.0-dev.20074"
+
+          # ARM macOS is not supported by this version
+          - runner: macos-latest
             spec: ">0.1.0-dev.20066 <0.1.0-dev.20074"
 
     name: Test installation for spec ${{ matrix.spec }} on ${{ matrix.runner }}
