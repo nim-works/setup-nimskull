@@ -33,7 +33,7 @@
     "@actions/http-client": "^2.2.1",
     "@actions/tool-cache": "^2.0.1",
     "@tsconfig/node20": "^20.1.4",
-    "semver": "^7.6.0",
+    "semver": "^7.6.3",
     "uuid": "^9.0.1"
   }
 }
